@@ -10,9 +10,11 @@ router.post('/create', async (req, res) => {
 	//reply 200 to shopify
 	res.status(200).send();
 
-	//extract sku and quantity
+	//extract sku, quantity and upsell properties
 	const order = req.body;
+	console.log(order);
 	const productsQuantity = {};
+	const upsellProperties = [];
 
 	for (const line_item of order.line_items) {
 		const realSku = line_item.sku.split('-')[0];
@@ -23,6 +25,14 @@ router.post('/create', async (req, res) => {
 			productsQuantity[realSku] += variantQuantity;
 		} else {
 			productsQuantity[realSku] = variantQuantity;
+		}
+
+		if (line_item.properties.length > 0) {
+			const upsellProperty = getUpsellProperty(line_item, 'downsale');
+
+			if (upsellProperty && !upsellProperties.find((property) => property == upsellProperty)) {
+				upsellProperties.push(upsellProperty);
+			}
 		}
 	}
 
@@ -66,6 +76,36 @@ router.post('/create', async (req, res) => {
 	costOfGood = costOfGood.toFixed(2);
 	console.log(costOfGood, codeNames);
 });
+
+function getUpsellProperty(item, upsellName) {
+	for (const property of item.properties) {
+		if (property[upsellName]) {
+			return `${upsellName} ${property[upsellName]}`;
+		}
+	}
+}
+
+async function addTag(client, orderId, tags) {
+	let tagsString = '';
+	for (const tag of tags) {
+		tagsString += `${tag}, `;
+	}
+	tagsString = tagsString.slice(0, -2);
+
+	let order = {
+		id: orderId,
+		tags: tagsString,
+	};
+
+	const body = { order };
+	const response = await client
+		.put({
+			path: `/orders/${orderId}`,
+			data: body,
+			type: DataType.JSON,
+		})
+		.catch((err) => console.log(err));
+}
 
 async function calculateCog(item) {
 	const inventoryItem = await shopifyFetch(client, 'inventory_items', [`ids=${item.variant.inventory_item_id}`]);

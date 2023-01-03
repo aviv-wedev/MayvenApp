@@ -1,0 +1,21 @@
+version: 0.2
+
+env:
+  secrets-manager:
+    ENVIRONMENT_FILE: badimtlvapi-$ENVIRONMENT-environment
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 14
+  build:
+    commands:
+      - echo Deploying projects
+      - echo "$ENVIRONMENT_FILE" > .env
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 964817954891.dkr.ecr.us-east-1.amazonaws.com
+      - docker-compose -f docker-compose-$ENVIRONMENT-app.yml build
+      - docker push 964817954891.dkr.ecr.us-east-1.amazonaws.com/badimtlvapi-$ENVIRONMENT/app:latest
+      - aws ecs update-service --force-new-deployment --service badimtlvapi-$ENVIRONMENT-app-service --cluster badimtlvapi-$ENVIRONMENT-main-cluster
+  post_build:
+    commands:
+      - echo Deploy complete

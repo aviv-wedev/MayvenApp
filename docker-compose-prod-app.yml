@@ -1,0 +1,14 @@
+version: "3"
+services:
+  app:
+    container_name: app
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        env_name: prod
+        app_name: app
+    ports:
+      - "80:80"
+    image: 964817954891.dkr.ecr.us-east-1.amazonaws.com/badimtlvapi-prod/app:latest

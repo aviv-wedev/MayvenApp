@@ -1,3 +1,4 @@
+require('dotenv').config();
 const client = require('./client');
 const { DataType } = require('@shopify/shopify-api');
 const availableTopics = ['orders/create'];
@@ -17,7 +18,7 @@ async function initiateWebhooks() {
 	console.log(webhooks);
 
 	for (const topic of availableTopics) {
-		const url = `https://1157-77-137-78-229.eu.ngrok.io/api/${topic.split('/')[0]}/${topic.split('/')[1]}`;
+		const url = `${process.env.WEBHOOK_URL}/api/${topic.split('/')[0]}/${topic.split('/')[1]}`;
 		const existingWebhook = webhooks.find((webhook) => webhook.topic == topic && webhook.address == url);
 
 		if (!existingWebhook) {

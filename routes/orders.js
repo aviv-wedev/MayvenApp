@@ -12,7 +12,6 @@ router.post('/create', async (req, res) => {
 
 	//extract sku, quantity and upsell properties
 	const order = req.body;
-	console.log(order);
 	const productsQuantity = {};
 	const upsellProperties = [];
 
@@ -37,7 +36,7 @@ router.post('/create', async (req, res) => {
 	}
 
 	//productsQuantity = { sku: quantity, ... }
-	console.log(productsQuantity);
+	console.log(productsQuantity, upsellProperties);
 
 	//find the inventory product by SKU
 	const allProducts = await shopifyFetch(client, 'products');
@@ -65,7 +64,7 @@ router.post('/create', async (req, res) => {
 				path: `products/${productsQuantity[sku].product.id}/metafields`,
 			});
 
-			for (const metafield of variantMetafields.body.metafields) {
+			for (const metafield of variantMetafields?.body?.metafields) {
 				if (metafield.key == 'inv_label') {
 					codeNames.push(`${metafield.value}X${productsQuantity[sku].quantity}`);
 				}
@@ -75,12 +74,30 @@ router.post('/create', async (req, res) => {
 	}
 	costOfGood = costOfGood.toFixed(2);
 	console.log(costOfGood, codeNames);
+
+	//get the payment id from the transaction
+	const transactionList = [];
+	const transactions = await client.get({
+		path: `orders/${order.id}/transactions`,
+	});
+
+	for (const transaction of transactions?.body?.transactions) {
+		if (transaction.gateway == 'Hyp') {
+			transactionList.push(transaction?.receipt?.payment_id);
+		}
+	}
+	console.log(transactionList);
+
+	//adds tag to orders that contain upsell products
+	if (upsellProperties.length > 0) {
+		addTag(client, order.id, upsellProperties);
+	}
 });
 
 function getUpsellProperty(item, upsellName) {
 	for (const property of item.properties) {
-		if (property[upsellName]) {
-			return `${upsellName} ${property[upsellName]}`;
+		if (property.name == upsellName) {
+			return `${upsellName} ${property.value}`;
 		}
 	}
 }
@@ -98,13 +115,11 @@ async function addTag(client, orderId, tags) {
 	};
 
 	const body = { order };
-	const response = await client
-		.put({
-			path: `/orders/${orderId}`,
-			data: body,
-			type: DataType.JSON,
-		})
-		.catch((err) => console.log(err));
+	const response = await client.put({
+		path: `/orders/${orderId}`,
+		data: body,
+		type: DataType.JSON,
+	});
 }
 
 async function calculateCog(item) {

@@ -1,7 +1,7 @@
 require('dotenv').config();
 const client = require('./client');
 const { DataType } = require('@shopify/shopify-api');
-const availableTopics = ['orders/create'];
+const availableTopics = ['orders/create', 'orders/updated'];
 const activeWebhooks = [];
 
 initiateWebhooks();
